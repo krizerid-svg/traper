@@ -272,7 +272,12 @@
 
   function launch(){
     curDir = DIRS[Math.floor(Math.random()*DIRS.length)];
-    const [x,y]=VEC[curDir];
+    const [bx,by]=VEC[curDir];
+    // 매 발사마다 비행 방향을 ±2~3° 무작위로 회전 (정답은 동일하나 궤적은 매번 달라짐)
+    const deg = (2 + Math.random()) * (Math.random()<0.5 ? -1 : 1); // ±(2~3)°
+    const a = deg * Math.PI/180;
+    const x = bx*Math.cos(a) - by*Math.sin(a);
+    const y = bx*Math.sin(a) + by*Math.cos(a);
     resetPigeon();
     statusEl.textContent="";
     grid.classList.remove("disabled");
@@ -280,7 +285,7 @@
     requestAnimationFrame(()=>{
       pigeon.style.opacity="1";
       pigeon.style.transition=`transform ${FLIGHT_MS}ms cubic-bezier(.22,.7,.5,1), opacity .15s`;
-      pigeon.style.transform=`translate(${x}vw, ${y}vh) scale(.42)`;
+      pigeon.style.transform=`translate(${x.toFixed(2)}vw, ${y.toFixed(2)}vh) scale(.42)`;
     });
     launchTime=performance.now();
     beep(880,.07);
