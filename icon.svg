@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1b2740"/>
+      <stop offset="1" stop-color="#0a121c"/>
+    </linearGradient>
+    <radialGradient id="clay" cx="40%" cy="35%" r="70%">
+      <stop offset="0" stop-color="#ffb066"/>
+      <stop offset="1" stop-color="#ff7a18"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <!-- target rings -->
+  <g fill="none" stroke="#ffcf33" stroke-width="14" opacity="0.85">
+    <circle cx="256" cy="256" r="150"/>
+    <circle cx="256" cy="256" r="100"/>
+    <circle cx="256" cy="256" r="52"/>
+  </g>
+  <!-- crosshair -->
+  <g stroke="#ffcf33" stroke-width="12" opacity="0.85">
+    <line x1="256" y1="70" x2="256" y2="120"/>
+    <line x1="256" y1="392" x2="256" y2="442"/>
+    <line x1="70" y1="256" x2="120" y2="256"/>
+    <line x1="392" y1="256" x2="442" y2="256"/>
+  </g>
+  <!-- flying clay -->
+  <ellipse cx="256" cy="256" rx="58" ry="26" fill="url(#clay)" transform="rotate(-22 256 256)"/>
+</svg>

@@ -1,0 +1,17 @@
+{
+  "name": "트랩 사격 · 방향 맞추기",
+  "short_name": "트랩사격",
+  "description": "사출구에서 발사된 피전의 9방향을 빠르게 맞추는 반응속도 게임",
+  "lang": "ko",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#0a121c",
+  "theme_color": "#0a121c",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon.svg", "type": "image/svg+xml", "sizes": "any", "purpose": "any maskable" }
+  ]
+}

@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="트랩사격">
+<meta name="theme-color" content="#0a121c">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<title>트랩 사격 - 방향 맞추기</title>
+<style>
+  :root{
+    --bg-top:#bfe3ff;
+    --bg-mid:#e8f6ff;
+    --field:#5a9e4a;
+    --field-dark:#3f7a34;
+    --house:#5b6470;
+    --pigeon:#ff7a18;
+    --accent:#ffcf33;
+    --ok:#2ecc71;
+    --bad:#e74c3c;
+    --panel:rgba(10,18,28,.82);
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0; height:100%; overflow:hidden; background:#0a121c;
+    font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Segoe UI",sans-serif;
+    color:#fff; user-select:none; -webkit-user-select:none; touch-action:manipulation;}
+  #app{position:fixed; inset:0; display:flex; flex-direction:column;}
+
+  /* ===== 사격장 시야 ===== */
+  #scene{position:relative; flex:1 1 auto; overflow:hidden;
+    background:linear-gradient(180deg,var(--bg-top) 0%,var(--bg-mid) 55%, #d8f0d0 56%, #d8f0d0 100%);}
+  #field{position:absolute; left:0; right:0; bottom:0; height:46%;
+    background:linear-gradient(180deg,var(--field) 0%,var(--field-dark) 100%);
+    transform:perspective(420px) rotateX(42deg); transform-origin:bottom center;}
+  .gridline{position:absolute; left:50%; bottom:0; width:2px; height:100%;
+    background:rgba(255,255,255,.18); transform-origin:bottom center;}
+  #scene .sun{position:absolute; top:6%; right:10%; width:64px; height:64px; border-radius:50%;
+    background:radial-gradient(circle,#fff6c2,#ffe169); box-shadow:0 0 60px #ffe169aa;}
+  /* 사출구 (trap house) */
+  #house{position:absolute; left:50%; bottom:8%; transform:translateX(-50%);
+    width:120px; height:46px; background:linear-gradient(180deg,#6b7480,#454c57);
+    border:3px solid #2c323b; border-radius:8px 8px 4px 4px; box-shadow:0 8px 18px rgba(0,0,0,.35);}
+  #house::after{content:"사출구"; position:absolute; left:0; right:0; top:50%; transform:translateY(-50%);
+    text-align:center; font-size:13px; font-weight:700; color:#e9eef5; letter-spacing:1px;}
+
+  /* 피전 (clay target) */
+  #pigeon{position:absolute; left:50%; bottom:14%; width:34px; height:14px; margin-left:-17px;
+    border-radius:50%; background:radial-gradient(circle at 35% 30%,#ffb066,var(--pigeon));
+    box-shadow:0 0 14px #ff7a1888; opacity:0; pointer-events:none; z-index:5;
+    transition:transform .1s linear, opacity .15s;}
+  #pigeon.smash{background:radial-gradient(circle,#fff,#ffd27a); box-shadow:0 0 30px #fff;}
+
+  /* HUD */
+  #hud{position:absolute; top:0; left:0; right:0; padding:10px 16px;
+    display:flex; justify-content:space-between; align-items:center; z-index:8;
+    background:linear-gradient(180deg,rgba(0,0,0,.35),transparent); font-weight:700;}
+  #hud .chip{background:var(--panel); padding:6px 14px; border-radius:20px; font-size:15px;}
+  #hud .chip b{color:var(--accent);}
+  #status{position:absolute; top:46%; left:0; right:0; text-align:center; z-index:7;
+    font-size:30px; font-weight:800; text-shadow:0 2px 8px rgba(0,0,0,.5); pointer-events:none;}
+  #feedback{position:absolute; top:30%; left:0; right:0; text-align:center; z-index:9;
+    font-size:42px; font-weight:900; opacity:0; transition:opacity .12s; pointer-events:none;
+    text-shadow:0 3px 10px rgba(0,0,0,.6);}
+
+  /* ===== 버튼 패널 ===== */
+  #pad{flex:0 0 auto; padding:10px; background:#0d1622;}
+  #grid{display:grid; grid-template-columns:repeat(3,1fr); grid-template-rows:repeat(3,1fr);
+    gap:8px; max-width:560px; margin:0 auto; height:240px;}
+
+  /* ===== 가로모드 레이아웃: 시야 왼쪽 전체 + 버튼 오른쪽 세로 패널 ===== */
+  @media (orientation:landscape){
+    #app{flex-direction:row;}
+    #scene{height:100%;}
+    #pad{flex:0 0 clamp(260px, 32vw, 360px); height:100%; display:flex; align-items:center; padding:14px;}
+    #grid{height:100%; max-height:min(96vh, 460px); width:100%; max-width:360px; margin:auto; gap:10px;}
+    .btn{font-size:16px;}
+    .btn .arrow{font-size:34px;}
+  }
+  .btn{border:none; border-radius:14px; color:#fff; font-weight:800;
+    background:linear-gradient(180deg,#2b3a52,#1b2740); border:2px solid #34465f;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    font-size:15px; gap:2px; cursor:pointer; transition:transform .05s, background .1s;
+    touch-action:manipulation;}
+  .btn .arrow{font-size:30px; line-height:1;}
+  .btn:active{transform:scale(.95); background:linear-gradient(180deg,#3a5278,#243556);}
+  .btn.armed{background:linear-gradient(180deg,#2b3a52,#1b2740);}
+  .btn.flash-ok{background:linear-gradient(180deg,#2ecc71,#1f9d57)!important; border-color:#7dffb0;}
+  .btn.flash-bad{background:linear-gradient(180deg,#e74c3c,#b8301f)!important; border-color:#ff9a8c;}
+  #grid.disabled .btn{opacity:.45;}
+
+  /* ===== 오버레이 (시작/결과) ===== */
+  .overlay{position:fixed; inset:0; z-index:20; background:rgba(6,12,20,.92);
+    display:flex; flex-direction:column; align-items:center; justify-content:center; padding:24px;}
+  .overlay.hidden{display:none;}
+  .overlay h1{font-size:34px; margin:0 0 6px; color:var(--accent); letter-spacing:1px;}
+  .overlay p{margin:4px 0; color:#cdd6e2; font-size:16px; text-align:center; line-height:1.5;}
+  .bigbtn{margin-top:22px; padding:16px 44px; font-size:22px; font-weight:800; border:none;
+    border-radius:40px; background:linear-gradient(180deg,#ffd84a,#f5a623); color:#3a2a00;
+    cursor:pointer; box-shadow:0 8px 20px rgba(245,166,35,.4);}
+  .bigbtn:active{transform:scale(.96);}
+
+  /* 결과 */
+  #resultPanel{width:100%; max-width:720px; height:100%; display:flex; flex-direction:column;}
+  #resultSummary{display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin:8px 0 14px;}
+  #resultSummary .card{background:#152033; border:1px solid #25344d; border-radius:14px;
+    padding:10px 18px; text-align:center; min-width:120px;}
+  #resultSummary .card .v{font-size:26px; font-weight:900; color:var(--accent);}
+  #resultSummary .card .l{font-size:13px; color:#9fb0c6;}
+  #tableWrap{flex:1 1 auto; overflow-y:auto; -webkit-overflow-scrolling:touch;
+    background:#0f1827; border-radius:12px; border:1px solid #25344d;}
+  table{width:100%; border-collapse:collapse; font-size:15px;}
+  th,td{padding:9px 8px; text-align:center; border-bottom:1px solid #1d2c43;}
+  th{position:sticky; top:0; background:#1a2740; color:#bcd; font-size:13px; z-index:1;}
+  td.ok{color:var(--ok); font-weight:800;}
+  td.bad{color:var(--bad); font-weight:800;}
+  .fast{color:var(--accent); font-weight:700;}
+
+  /* ===== 세로모드: 가로로 돌리기 안내 ===== */
+  #rotate{position:fixed; inset:0; z-index:60; background:#06101c;
+    display:none; flex-direction:column; align-items:center; justify-content:center; gap:18px; padding:30px;}
+  #rotate .ico{font-size:72px; animation:turn 1.8s ease-in-out infinite;}
+  #rotate p{font-size:20px; font-weight:800; color:var(--accent); margin:0; text-align:center;}
+  @keyframes turn{0%,40%{transform:rotate(0)} 60%,100%{transform:rotate(-90deg)}}
+  @media (orientation:portrait){ #rotate{display:flex;} }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="scene">
+    <div class="sun"></div>
+    <div id="field"></div>
+    <div id="house"></div>
+    <div id="pigeon"></div>
+    <div id="hud">
+      <div class="chip">발수 <b id="shotNum">0</b>/25</div>
+      <div class="chip">점수 <b id="score">0</b></div>
+    </div>
+    <div id="feedback"></div>
+    <div id="status">시작을 누르세요</div>
+  </div>
+
+  <div id="pad">
+    <div id="grid" class="disabled">
+      <button class="btn" data-dir="HL"><span class="arrow">↖</span>상·좌</button>
+      <button class="btn" data-dir="HC"><span class="arrow">↑</span>상·중</button>
+      <button class="btn" data-dir="HR"><span class="arrow">↗</span>상·우</button>
+      <button class="btn" data-dir="ML"><span class="arrow">←</span>중·좌</button>
+      <button class="btn" data-dir="MC"><span class="arrow">●</span>중·중</button>
+      <button class="btn" data-dir="MR"><span class="arrow">→</span>중·우</button>
+      <button class="btn" data-dir="LL"><span class="arrow">↙</span>하·좌</button>
+      <button class="btn" data-dir="LC"><span class="arrow">↓</span>하·중</button>
+      <button class="btn" data-dir="LR"><span class="arrow">↘</span>하·우</button>
+    </div>
+  </div>
+</div>
+
+<!-- 세로모드 안내 -->
+<div id="rotate">
+  <div class="ico">📱</div>
+  <p>기기를 가로로 돌려주세요</p>
+</div>
+
+<!-- 시작 화면 -->
+<div class="overlay" id="startScreen">
+  <h1>🎯 트랩 사격 · 방향 맞추기</h1>
+  <p>사출구에서 <b>피전(클레이)</b>이 날아갑니다.<br>
+     상·중·하 × 좌·중·우 <b>9방향</b> 중 어디로 갔는지<br>
+     아래 9개 버튼으로 빠르게 맞추세요!</p>
+  <p style="color:#8fa">빠르게 누를수록 높은 점수 · 총 25발 1라운드</p>
+  <button class="bigbtn" id="startBtn">시작</button>
+</div>
+
+<!-- 결과 화면 -->
+<div class="overlay hidden" id="resultScreen">
+  <div id="resultPanel">
+    <h1 style="text-align:center">라운드 결과</h1>
+    <div id="resultSummary"></div>
+    <div id="tableWrap">
+      <table>
+        <thead><tr><th>#</th><th>발사 방향</th><th>결과</th><th>반응시간</th><th>점수</th></tr></thead>
+        <tbody id="resultBody"></tbody>
+      </table>
+    </div>
+    <div style="text-align:center"><button class="bigbtn" id="restartBtn">다시 하기</button></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  const TOTAL = 25;
+  const FLIGHT_MS = 2400;        // 피전 비행시간(반응 가능 시간)
+  const DIRS = ["HL","HC","HR","ML","MC","MR","LL","LC","LR"];
+  const LABEL = {HL:"상·좌",HC:"상·중",HR:"상·우",ML:"중·좌",MC:"중·중",MR:"중·우",LL:"하·좌",LC:"하·중",LR:"하·우"};
+
+  // 방향별 비행 종착 transform (수평 vw, 수직 vh)
+  const VEC = {
+    HL:[-34,-58], HC:[0,-62], HR:[34,-58],
+    ML:[-40,-34], MC:[0,-40],  MR:[40,-34],
+    LL:[-36,-14], LC:[0,-18],  LR:[36,-14]
+  };
+
+  const el = id => document.getElementById(id);
+  const scene=el("scene"), pigeon=el("pigeon"), statusEl=el("status"),
+        feedback=el("feedback"), shotNumEl=el("shotNum"), scoreEl=el("score"),
+        grid=el("grid");
+
+  let state="idle";      // idle | waiting | flying | locked
+  let shot=0, score=0, results=[], launchTime=0, curDir=null, flightTimer=null, gapTimer=null;
+
+  // ---- 사운드 (가벼운 비프) ----
+  let ac=null;
+  function beep(freq,dur){
+    try{
+      if(!ac) ac=new (window.AudioContext||window.webkitAudioContext)();
+      const o=ac.createOscillator(), g=ac.createGain();
+      o.frequency.value=freq; o.type="square";
+      g.gain.setValueAtTime(.06,ac.currentTime);
+      g.gain.exponentialRampToValueAtTime(.001,ac.currentTime+dur);
+      o.connect(g); g.connect(ac.destination);
+      o.start(); o.stop(ac.currentTime+dur);
+    }catch(e){}
+  }
+
+  // 비행각도 표시용 그리드라인
+  (function buildGrid(){
+    const angles=[-40,-20,0,20,40];
+    angles.forEach(a=>{
+      const d=document.createElement("div");
+      d.className="gridline";
+      d.style.transform=`translateX(-50%) rotate(${a}deg)`;
+      el("field").appendChild(d);
+    });
+  })();
+
+  function resetPigeon(){
+    pigeon.style.transition="none";
+    pigeon.classList.remove("smash");
+    pigeon.style.opacity="0";
+    pigeon.style.transform="translate(0,0) scale(1)";
+    void pigeon.offsetWidth; // reflow
+  }
+
+  function launch(){
+    curDir = DIRS[Math.floor(Math.random()*DIRS.length)];
+    const [x,y]=VEC[curDir];
+    resetPigeon();
+    statusEl.textContent="";
+    grid.classList.remove("disabled");
+    state="flying";
+    requestAnimationFrame(()=>{
+      pigeon.style.opacity="1";
+      pigeon.style.transition=`transform ${FLIGHT_MS}ms cubic-bezier(.22,.7,.5,1), opacity .15s`;
+      pigeon.style.transform=`translate(${x}vw, ${y}vh) scale(.42)`;
+    });
+    launchTime=performance.now();
+    beep(880,.07);
+    // 시간 초과 = 실패(놓침)
+    flightTimer=setTimeout(()=>{ if(state==="flying") record(null); }, FLIGHT_MS);
+  }
+
+  function startShot(){
+    if(shot>=TOTAL){ endRound(); return; }
+    state="waiting";
+    grid.classList.add("disabled");
+    resetPigeon();
+    let n=3;
+    shotNumEl.textContent = shot+1;
+    statusEl.textContent="준비…";
+    // 0.7 ~ 2.3초 무작위 대기 후 발사
+    const wait = 700 + Math.random()*1600;
+    gapTimer=setTimeout(launch, wait);
+  }
+
+  function flashFeedback(text,color){
+    feedback.textContent=text;
+    feedback.style.color=color;
+    feedback.style.opacity="1";
+    setTimeout(()=>{feedback.style.opacity="0";},650);
+  }
+
+  function record(guess){
+    if(state!=="flying") return;
+    state="locked";
+    clearTimeout(flightTimer);
+    grid.classList.add("disabled");
+
+    const elapsed = guess===null ? null : Math.round(performance.now()-launchTime);
+    const correct = guess===curDir;
+
+    let pts=0;
+    if(correct){
+      // 빠를수록 높은 점수: 정답 기본 400 + 속도보너스 최대 600
+      const ratio = Math.max(0,(FLIGHT_MS-elapsed)/FLIGHT_MS);
+      pts = Math.round(400 + 600*ratio);
+      score += pts;
+      scoreEl.textContent=score;
+      flashFeedback("명중! +"+pts, "#2ecc71");
+      pigeon.classList.add("smash");
+      pigeon.style.transition="transform .12s, opacity .25s";
+      pigeon.style.opacity="0";
+      beep(1320,.08);
+    } else {
+      const why = guess===null ? "놓침" : "빗나감";
+      flashFeedback("실패 ("+why+")", "#e74c3c");
+      beep(180,.18);
+    }
+
+    // 버튼 점멸 표시
+    const guessBtn = guess ? grid.querySelector(`[data-dir="${guess}"]`) : null;
+    const ansBtn = grid.querySelector(`[data-dir="${curDir}"]`);
+    if(correct){ if(guessBtn) flashBtn(guessBtn,"flash-ok"); }
+    else { if(guessBtn) flashBtn(guessBtn,"flash-bad"); flashBtn(ansBtn,"flash-ok"); }
+
+    results.push({ dir:curDir, guess, correct, ms:elapsed, pts });
+    shot++;
+
+    gapTimer=setTimeout(startShot, 850);
+  }
+
+  function flashBtn(btn,cls){
+    btn.classList.add(cls);
+    setTimeout(()=>btn.classList.remove(cls),700);
+  }
+
+  // 버튼 입력 (pointerdown = 가장 빠른 반응)
+  grid.querySelectorAll(".btn").forEach(btn=>{
+    btn.addEventListener("pointerdown", e=>{
+      e.preventDefault();
+      if(state!=="flying") return;
+      record(btn.dataset.dir);
+    });
+  });
+
+  function startRound(){
+    shot=0; score=0; results=[];
+    scoreEl.textContent=0; shotNumEl.textContent=0;
+    el("startScreen").classList.add("hidden");
+    el("resultScreen").classList.add("hidden");
+    // 오디오 활성화(사용자 제스처 내)
+    try{ if(!ac) ac=new (window.AudioContext||window.webkitAudioContext)(); if(ac.state==="suspended") ac.resume(); }catch(e){}
+    startShot();
+  }
+
+  function endRound(){
+    state="idle";
+    statusEl.textContent="";
+    const hits = results.filter(r=>r.correct);
+    const avg = hits.length ? Math.round(hits.reduce((s,r)=>s+r.ms,0)/hits.length) : null;
+
+    el("resultSummary").innerHTML =
+      card(hits.length+"/"+TOTAL,"성공") +
+      card(score.toLocaleString(),"총점") +
+      card(avg!==null? avg+" ms":"-","평균 반응시간") +
+      card((Math.round(hits.length/TOTAL*100))+"%","명중률");
+
+    const body=el("resultBody"); body.innerHTML="";
+    results.forEach((r,i)=>{
+      const tr=document.createElement("tr");
+      const msTxt = r.ms===null ? "-" : r.ms+" ms";
+      const msCls = (r.correct && r.ms!==null && r.ms<700) ? "fast" : "";
+      tr.innerHTML =
+        `<td>${i+1}</td>`+
+        `<td>${LABEL[r.dir]}</td>`+
+        `<td class="${r.correct?'ok':'bad'}">${r.correct?'성공':'실패'}</td>`+
+        `<td class="${msCls}">${msTxt}</td>`+
+        `<td>${r.pts}</td>`;
+      body.appendChild(tr);
+    });
+    el("resultScreen").classList.remove("hidden");
+  }
+  function card(v,l){return `<div class="card"><div class="v">${v}</div><div class="l">${l}</div></div>`;}
+
+  el("startBtn").addEventListener("click", startRound);
+  el("restartBtn").addEventListener("click", startRound);
+
+  // 더블탭 줌 방지
+  document.addEventListener("gesturestart", e=>e.preventDefault());
+})();
+</script>
+</body>
+</html>
