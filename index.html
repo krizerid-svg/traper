@@ -33,7 +33,9 @@
 
   /* ===== 사격장 시야 ===== */
   #scene{position:relative; flex:1 1 auto; overflow:hidden;
-    background:linear-gradient(180deg,var(--bg-top) 0%,var(--bg-mid) 55%, #d8f0d0 56%, #d8f0d0 100%);}
+    background:#3a4a36 url("bg.jpg") center center / cover no-repeat;}
+  /* 사진 배경 사용: 사출구/태양/필드 오버레이 숨김 */
+  .sun,#field,#house{display:none!important;}
   #field{position:absolute; left:0; right:0; bottom:0; height:46%;
     background:linear-gradient(180deg,var(--field) 0%,var(--field-dark) 100%);
     transform:perspective(420px) rotateX(42deg); transform-origin:bottom center;}
@@ -49,7 +51,7 @@
     text-align:center; font-size:13px; font-weight:700; color:#e9eef5; letter-spacing:1px;}
 
   /* 피전 (clay target) */
-  #pigeon{position:absolute; left:50%; bottom:14%; width:34px; height:14px; margin-left:-17px;
+  #pigeon{position:absolute; left:50%; top:62%; width:34px; height:14px; margin-left:-17px; margin-top:-7px;
     border-radius:50%; background:radial-gradient(circle at 35% 30%,#ffb066,var(--pigeon));
     box-shadow:0 0 14px #ff7a1888; opacity:0; pointer-events:none; z-index:5;
     transition:transform .1s linear, opacity .15s;}
@@ -63,14 +65,13 @@
   #hud .chip b{color:var(--accent);}
   #status{position:absolute; top:46%; left:0; right:0; text-align:center; z-index:7;
     font-size:30px; font-weight:800; text-shadow:0 2px 8px rgba(0,0,0,.5); pointer-events:none;}
-  #fireBtn{position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); z-index:9;
-    padding:18px 46px; font-size:24px; font-weight:900; color:#3a2a00; border:none;
-    border-radius:46px; background:linear-gradient(180deg,#ffd84a,#f5a623);
-    box-shadow:0 8px 22px rgba(245,166,35,.5); cursor:pointer; letter-spacing:1px;
-    animation:pulse 1.1s ease-in-out infinite; touch-action:manipulation;}
-  #fireBtn:active{transform:translate(-50%,-50%) scale(.94);}
+  #fireBtn{display:block; margin:10px auto 0; padding:16px 24px; width:100%; max-width:360px;
+    font-size:22px; font-weight:900; color:#3a2a00; border:none; border-radius:16px;
+    background:linear-gradient(180deg,#ffd84a,#f5a623); box-shadow:0 6px 18px rgba(245,166,35,.5);
+    cursor:pointer; letter-spacing:1px; animation:pulse 1.1s ease-in-out infinite; touch-action:manipulation;}
+  #fireBtn:active{transform:scale(.96);}
   #fireBtn.hidden{display:none;}
-  @keyframes pulse{0%,100%{box-shadow:0 8px 22px rgba(245,166,35,.5)} 50%{box-shadow:0 8px 34px rgba(245,166,35,.9)}}
+  @keyframes pulse{0%,100%{box-shadow:0 6px 18px rgba(245,166,35,.5)} 50%{box-shadow:0 8px 30px rgba(245,166,35,.95)}}
   #feedback{position:absolute; top:30%; left:0; right:0; text-align:center; z-index:9;
     font-size:42px; font-weight:900; opacity:0; transition:opacity .12s; pointer-events:none;
     text-shadow:0 3px 10px rgba(0,0,0,.6);}
@@ -84,8 +85,9 @@
   @media (orientation:landscape){
     #app{flex-direction:row;}
     #scene{height:100%;}
-    #pad{flex:0 0 clamp(260px, 32vw, 360px); height:100%; display:flex; align-items:center; padding:14px;}
-    #grid{height:100%; max-height:min(96vh, 460px); width:100%; max-width:360px; margin:auto; gap:10px;}
+    #pad{flex:0 0 clamp(260px, 32vw, 360px); height:100%; display:flex; flex-direction:column;
+      align-items:center; justify-content:center; gap:8px; padding:14px;}
+    #grid{height:min(68vh, 420px); width:100%; max-width:360px; margin:0; gap:10px;}
     .btn{font-size:16px;}
     .btn .arrow{font-size:34px;}
   }
@@ -150,7 +152,6 @@
     </div>
     <div id="feedback"></div>
     <div id="status">시작을 누르세요</div>
-    <button id="fireBtn" class="hidden">🔫 발사</button>
   </div>
 
   <div id="pad">
@@ -165,6 +166,7 @@
       <button class="btn" data-dir="LC"><span class="arrow">↓</span>하·중</button>
       <button class="btn" data-dir="LR"><span class="arrow">↘</span>하·우</button>
     </div>
+    <button id="fireBtn" class="hidden">🔫 발사</button>
   </div>
 </div>
 
