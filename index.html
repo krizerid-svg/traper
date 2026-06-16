@@ -63,6 +63,14 @@
   #hud .chip b{color:var(--accent);}
   #status{position:absolute; top:46%; left:0; right:0; text-align:center; z-index:7;
     font-size:30px; font-weight:800; text-shadow:0 2px 8px rgba(0,0,0,.5); pointer-events:none;}
+  #fireBtn{position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); z-index:9;
+    padding:18px 46px; font-size:24px; font-weight:900; color:#3a2a00; border:none;
+    border-radius:46px; background:linear-gradient(180deg,#ffd84a,#f5a623);
+    box-shadow:0 8px 22px rgba(245,166,35,.5); cursor:pointer; letter-spacing:1px;
+    animation:pulse 1.1s ease-in-out infinite; touch-action:manipulation;}
+  #fireBtn:active{transform:translate(-50%,-50%) scale(.94);}
+  #fireBtn.hidden{display:none;}
+  @keyframes pulse{0%,100%{box-shadow:0 8px 22px rgba(245,166,35,.5)} 50%{box-shadow:0 8px 34px rgba(245,166,35,.9)}}
   #feedback{position:absolute; top:30%; left:0; right:0; text-align:center; z-index:9;
     font-size:42px; font-weight:900; opacity:0; transition:opacity .12s; pointer-events:none;
     text-shadow:0 3px 10px rgba(0,0,0,.6);}
@@ -142,6 +150,7 @@
     </div>
     <div id="feedback"></div>
     <div id="status">시작을 누르세요</div>
+    <button id="fireBtn" class="hidden">🔫 발사</button>
   </div>
 
   <div id="pad">
@@ -208,9 +217,9 @@
   const el = id => document.getElementById(id);
   const scene=el("scene"), pigeon=el("pigeon"), statusEl=el("status"),
         feedback=el("feedback"), shotNumEl=el("shotNum"), scoreEl=el("score"),
-        grid=el("grid");
+        grid=el("grid"), fireBtn=el("fireBtn");
 
-  let state="idle";      // idle | waiting | flying | locked
+  let state="idle";      // idle | ready | waiting | flying | locked
   let shot=0, score=0, results=[], launchTime=0, curDir=null, flightTimer=null, gapTimer=null;
 
   // ---- 사운드 (가벼운 비프) ----
@@ -266,15 +275,22 @@
 
   function startShot(){
     if(shot>=TOTAL){ endRound(); return; }
-    state="waiting";
+    state="ready";
     grid.classList.add("disabled");
     resetPigeon();
-    let n=3;
     shotNumEl.textContent = shot+1;
-    statusEl.textContent="준비…";
-    // 0.7 ~ 2.3초 무작위 대기 후 발사
-    const wait = 700 + Math.random()*1600;
-    gapTimer=setTimeout(launch, wait);
+    statusEl.textContent="";
+    fireBtn.classList.remove("hidden");   // 사용자가 발사 버튼을 누를 때까지 대기
+  }
+
+  function fire(){
+    if(state!=="ready") return;
+    state="waiting";
+    fireBtn.classList.add("hidden");
+    statusEl.textContent="발사!";
+    beep(440,.05);
+    // 발사 버튼을 누른 뒤 0.5초 후 피전 발사
+    gapTimer=setTimeout(launch, 500);
   }
 
   function flashFeedback(text,color){
@@ -349,6 +365,7 @@
 
   function endRound(){
     state="idle";
+    fireBtn.classList.add("hidden");
     statusEl.textContent="";
     const hits = results.filter(r=>r.correct);
     const avg = hits.length ? Math.round(hits.reduce((s,r)=>s+r.ms,0)/hits.length) : null;
@@ -375,6 +392,8 @@
     el("resultScreen").classList.remove("hidden");
   }
   function card(v,l){return `<div class="card"><div class="v">${v}</div><div class="l">${l}</div></div>`;}
+
+  fireBtn.addEventListener("pointerdown", e=>{ e.preventDefault(); fire(); });
 
   el("startBtn").addEventListener("click", startRound);
   el("restartBtn").addEventListener("click", startRound);
