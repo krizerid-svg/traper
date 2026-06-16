@@ -113,6 +113,10 @@
     border-radius:40px; background:linear-gradient(180deg,#ffd84a,#f5a623); color:#3a2a00;
     cursor:pointer; box-shadow:0 8px 20px rgba(245,166,35,.4);}
   .bigbtn:active{transform:scale(.96);}
+  .diffrow{display:flex; gap:14px; margin-top:14px; flex-wrap:wrap; justify-content:center;}
+  .bigbtn.diff{display:flex; flex-direction:column; align-items:center; gap:2px;
+    padding:16px 30px; min-width:96px;}
+  .bigbtn.diff small{font-size:13px; font-weight:700; opacity:.8;}
 
   /* 결과 */
   #resultPanel{width:100%; max-width:720px; height:100%; display:flex; flex-direction:column;}
@@ -183,7 +187,12 @@
      상·중·하 × 좌·중·우 <b>9방향</b> 중 어디로 갔는지<br>
      아래 9개 버튼으로 빠르게 맞추세요!</p>
   <p style="color:#8fa">빠르게 누를수록 높은 점수 · 총 25발 1라운드</p>
-  <button class="bigbtn" id="startBtn">시작</button>
+  <p style="margin-top:18px; font-weight:800; color:#fff">난이도를 선택하세요</p>
+  <div class="diffrow">
+    <button class="bigbtn diff" data-diff="easy">하<small>느림</small></button>
+    <button class="bigbtn diff" data-diff="mid">중<small>보통</small></button>
+    <button class="bigbtn diff" data-diff="hard">상<small>빠름</small></button>
+  </div>
 </div>
 
 <!-- 결과 화면 -->
@@ -205,14 +214,17 @@
 (function(){
   "use strict";
   const TOTAL = 25;
-  const FLIGHT_MS = 2400;        // 피전 비행시간(반응 가능 시간)
+  const BASE_MS = 2400;          // 기준(중) 비행시간
+  // 난이도별 비행시간: 하=느림, 중=기준, 상=120% 속도(=기준/1.2)
+  const DIFF = { easy:3000, mid:2400, hard:Math.round(2400/1.2) };
+  let FLIGHT_MS = DIFF.mid;      // 선택한 난이도에 따라 설정됨
   const DIRS = ["HL","HC","HR","ML","MC","MR","LL","LC","LR"];
   const LABEL = {HL:"상·좌",HC:"상·중",HR:"상·우",ML:"중·좌",MC:"중·중",MR:"중·우",LL:"하·좌",LC:"하·중",LR:"하·우"};
 
-  // 방향별 비행 종착 transform (수평 vw, 수직 vh)
+  // 방향별 비행 종착 transform (수평 vw, 수직 vh) — 상·중 상승각 완화
   const VEC = {
-    HL:[-34,-58], HC:[0,-62], HR:[34,-58],
-    ML:[-40,-34], MC:[0,-40],  MR:[40,-34],
+    HL:[-34,-48], HC:[0,-52], HR:[34,-48],
+    ML:[-40,-26], MC:[0,-30],  MR:[40,-26],
     LL:[-36,-14], LC:[0,-18],  LR:[36,-14]
   };
 
@@ -355,7 +367,8 @@
     });
   });
 
-  function startRound(){
+  function startRound(diff){
+    if(diff && DIFF[diff]) FLIGHT_MS = DIFF[diff];
     shot=0; score=0; results=[];
     scoreEl.textContent=0; shotNumEl.textContent=0;
     el("startScreen").classList.add("hidden");
@@ -397,8 +410,15 @@
 
   fireBtn.addEventListener("pointerdown", e=>{ e.preventDefault(); fire(); });
 
-  el("startBtn").addEventListener("click", startRound);
-  el("restartBtn").addEventListener("click", startRound);
+  // 난이도 버튼: 선택 시 해당 난이도로 라운드 시작
+  document.querySelectorAll(".diff").forEach(b=>{
+    b.addEventListener("click", ()=> startRound(b.dataset.diff));
+  });
+  // 다시 하기 → 난이도 선택 화면으로 복귀
+  el("restartBtn").addEventListener("click", ()=>{
+    el("resultScreen").classList.add("hidden");
+    el("startScreen").classList.remove("hidden");
+  });
 
   // 더블탭 줌 방지
   document.addEventListener("gesturestart", e=>e.preventDefault());
